@@ -38,6 +38,25 @@
         <div class="p-6 md:p-8 space-y-6">
             <!-- 輸入區 -->
             <div class="space-y-4">
+                <!-- 性別選擇 -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-2">性別</label>
+                    <div class="flex gap-4">
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="gender" value="male" class="peer sr-only" checked>
+                            <div class="text-center p-3 rounded-xl border border-slate-200 bg-slate-50 peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 transition-all shadow-sm">
+                                👨 男性
+                            </div>
+                        </label>
+                        <label class="flex-1 cursor-pointer">
+                            <input type="radio" name="gender" value="female" class="peer sr-only">
+                            <div class="text-center p-3 rounded-xl border border-slate-200 bg-slate-50 peer-checked:bg-pink-50 peer-checked:border-pink-500 peer-checked:text-pink-700 transition-all shadow-sm">
+                                👩 女性
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- 年齡輸入 -->
                 <div>
                     <label for="age" class="block text-sm font-medium text-slate-600 mb-1">年齡 (歲)</label>
@@ -94,6 +113,23 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 活動量選擇 (用於計算 TDEE) -->
+                <div>
+                    <label for="activity" class="block text-sm font-medium text-slate-600 mb-1">日常活動量</label>
+                    <div class="relative">
+                        <select id="activity" class="w-full bg-slate-50 border border-slate-200 text-slate-900 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block p-3 appearance-none outline-none transition-colors shadow-sm cursor-pointer">
+                            <option value="1.2">幾乎不動 (辦公室工作、不運動)</option>
+                            <option value="1.375">輕度活動 (每週運動 1-3 天)</option>
+                            <option value="1.55">中度活動 (每週運動 3-5 天)</option>
+                            <option value="1.725">高度活動 (每週運動 6-7 天)</option>
+                            <option value="1.9">極度活動 (體力勞動、每天高強度訓練)</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                            <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- 錯誤提示訊息 -->
@@ -133,6 +169,24 @@
                     </span>
                 </div>
 
+                <!-- BMR & TDEE 資訊卡 -->
+                <div class="mt-3 grid grid-cols-2 gap-3">
+                    <div class="bg-indigo-50 rounded-xl p-3 border border-indigo-100 shadow-sm text-center">
+                        <div class="text-xs text-indigo-600 font-medium mb-1">基礎代謝率 (BMR)</div>
+                        <div class="flex items-end justify-center gap-1">
+                            <span id="bmr-value" class="text-xl font-bold text-indigo-900 tracking-tight">--</span>
+                            <span class="text-[10px] text-indigo-500 mb-1">大卡</span>
+                        </div>
+                    </div>
+                    <div class="bg-orange-50 rounded-xl p-3 border border-orange-100 shadow-sm text-center">
+                        <div class="text-xs text-orange-600 font-medium mb-1">每日總熱量 (TDEE)</div>
+                        <div class="flex items-end justify-center gap-1">
+                            <span id="tdee-value" class="text-xl font-bold text-orange-900 tracking-tight">--</span>
+                            <span class="text-[10px] text-orange-500 mb-1">大卡</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 建議文字 -->
                 <p id="bmi-advice" class="text-center text-sm text-slate-600 mt-4 px-2 leading-relaxed">
                     繼續保持良好的飲食與運動習慣！
@@ -165,9 +219,11 @@
     <script>
         function calculateBMI() {
             // 取得輸入值
+            const gender = document.querySelector('input[name="gender"]:checked').value;
             const ageInput = document.getElementById('age').value;
             const heightInput = document.getElementById('height').value;
             const weightInput = document.getElementById('weight').value;
+            const activityLevel = parseFloat(document.getElementById('activity').value);
             const errorMsg = document.getElementById('error-msg');
             const resultContainer = document.getElementById('result-container');
             
@@ -194,6 +250,17 @@
             // 計算健康體重範圍 (以 BMI 18.5 ~ 24 反推)
             const minWeight = (18.5 * heightM * heightM).toFixed(1);
             const maxWeight = (24 * heightM * heightM).toFixed(1);
+
+            // 計算 BMR (採用目前主流的 Mifflin-St Jeor 公式)
+            let bmr = 0;
+            if (gender === 'male') {
+                bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age) + 5;
+            } else {
+                bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age) - 161;
+            }
+
+            // 計算 TDEE (每日總消耗熱量)
+            const tdee = bmr * activityLevel;
 
             // 判斷狀態與顏色 (依據台灣國健署標準)
             let status = '';
@@ -234,6 +301,8 @@
             // 更新 UI
             document.getElementById('bmi-value').textContent = roundedBMI;
             document.getElementById('ideal-weight-range').textContent = `${minWeight} ~ ${maxWeight} kg`;
+            document.getElementById('bmr-value').textContent = Math.round(bmr).toLocaleString();
+            document.getElementById('tdee-value').textContent = Math.round(tdee).toLocaleString();
             
             const badge = document.getElementById('bmi-status-badge');
             badge.textContent = status;
